@@ -154,6 +154,8 @@ class Tapper:
 
     async def register(self, http_client: aiohttp.ClientSession):
         try:
+            json = None
+
             if settings.REF_ID == '':
                 referer_id = "737844465"
             else:
@@ -166,17 +168,21 @@ class Tapper:
                 if response.status in (200, 201):
                     return True
                 elif response.status == 409:
+                    json = {}
                     return 'registered'
                 else:
                     logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Something wrong with "
                                     f"register!")
                     return False
             else:
+                json = {}
                 logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Error while register, "
                                 f"please add username to telegram account, bot will not work!!!")
                 return False
         except Exception as error:
             logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while register {error}")
+            logger.debug(f'<light-yellow>{self.session_name}</light-yellow> | {json} | {response.status} | '
+                         f'{await response.text()}')
 
     async def auth(self, http_client: aiohttp.ClientSession):
         try:

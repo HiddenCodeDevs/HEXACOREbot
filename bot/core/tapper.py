@@ -154,12 +154,20 @@ class Tapper:
 
     async def register(self, http_client: aiohttp.ClientSession):
         try:
-            json = None
+            json = {}
 
             if settings.REF_ID == '':
                 referer_id = "737844465"
             else:
-                referer_id = settings.REF_ID
+                referer_id = str(settings.REF_ID)  # Ensure referer_id is a string
+
+            if self.username != '':
+                json = {
+                    "user_id": int(self.user_id),  # Ensure user_id is a string
+                    "fullname": f"{self.fullname}",
+                    "username": f"{self.username}",
+                    "referer_id": f"{referer_id}"
+                }
 
             if self.username != '':
                 json = {"user_id": self.user_id, "fullname": f"{self.fullname}", "username": f"{self.username}",

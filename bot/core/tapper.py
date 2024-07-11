@@ -152,47 +152,56 @@ class Tapper:
             logger.error(f"{self.session_name} | Unknown error during Authorization: {error}")
             await asyncio.sleep(delay=3)
 
-    async def register(self, http_client: aiohttp.ClientSession):
-        json = {}
-
-        if settings.REF_ID == '':
-            referer_id = "737844465"
-        else:
-            referer_id = str(settings.REF_ID)  # Ensure referer_id is a string
-
-        if self.username != '':
-            json = {
-                "user_id": int(self.user_id),  # Ensure user_id is a string
-                "fullname": f"{str(self.fullname)}",
-                "username": f"{str(self.username)}",
-                "referer_id": f"{str(referer_id)}"
-            }
-
-        if self.username != '':
-            json = {"user_id": self.user_id, "fullname": f"{self.fullname}", "username": f"{self.username}",
-                    "referer_id": f"{referer_id}"}
-            response = await http_client.post(url='https://ago-api.onrender.com/api/create-user', json=json)
-            if response.status == 409:
-                return 'registered'
-            if response.status in (200, 201):
-                return True
-            if response.status not in (200, 201, 409):
-                logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Something wrong with "
-                                f"register! {response.status}")
-                return False
-        else:
-            logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Error while register, "
-                            f"please add username to telegram account, bot will not work!!!")
-            return False
-
     async def auth(self, http_client: aiohttp.ClientSession):
         try:
             json = {"user_id": self.user_id, "username": self.username}
             response = await http_client.post(url='https://ago-api.onrender.com/api/app-auth', json=json)
+            response.raise_for_status()
             response_json = await response.json()
             return response_json.get('token')
         except Exception as error:
             logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while auth {error}")
+
+    async def register(self, http_client: aiohttp.ClientSession):
+        try:
+            json = {}
+
+            http_client.headers['Host'] = 'ago-api.onrender.com'
+            if http_client.headers['Authorization'] is None or http_client.headers['Authorization'] == '':
+                http_client.headers['Authorization'] = await self.auth(http_client=http_client)
+
+            if settings.REF_ID == '':
+                referer_id = "737844465"
+            else:
+                referer_id = str(settings.REF_ID)  # Ensure referer_id is a string
+
+            if self.username != '':
+                json = {
+                    "user_id": int(self.user_id),  # Ensure user_id is a string
+                    "fullname": f"{str(self.fullname)}",
+                    "username": f"{str(self.username)}",
+                    "referer_id": f"{str(referer_id)}"
+                }
+
+            if self.username != '':
+                json = {"user_id": self.user_id, "fullname": f"{self.fullname}", "username": f"{self.username}",
+                        "referer_id": f"{referer_id}"}
+                response = await http_client.post(url='https://ago-api.onrender.com/api/create-user', json=json)
+                if response.status == 409:
+                    return 'registered'
+                if response.status in (200, 201):
+                    return True
+                if response.status not in (200, 201, 409):
+                    logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Something wrong with "
+                                    f"register! {response.status}")
+                    return False
+            else:
+                logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Error while register, "
+                                f"please add username to telegram account, bot will not work!!!")
+                return False
+        except Exception as error:
+            logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while register {error}")
+            logger.debug(f'<light-yellow>{self.session_name}</light-yellow> | {json}')
 
     async def get_taps(self, http_client: aiohttp.ClientSession):
         try:
@@ -495,104 +504,104 @@ class Tapper:
 
         http_client.headers['Authorization'] = await self.auth(http_client=http_client)
         while True:
-            #try:
-            status = await self.register(http_client=http_client)
-            if status is True:
-                logger.success(f"<light-yellow>{self.session_name}</light-yellow> | Successfully account register")
-            elif status == 'registered':
-                pass
+            try:
+                status = await self.register(http_client=http_client)
+                if status is True:
+                    logger.success(f"<light-yellow>{self.session_name}</light-yellow> | Successfully account register")
+                elif status == 'registered':
+                    pass
 
-            info = await self.get_balance(http_client=http_client)
-            balance = info.get("balance") or 0
-            logger.info(f'<light-yellow>{self.session_name}</light-yellow> | Balance: {balance}')
-
-            tokens = await self.daily_claim(http_client=http_client)
-            if tokens is not False:
-                logger.success(f'<light-yellow>{self.session_name}</light-yellow> | Daily claimed: {tokens} AGO')
-
-            if settings.AUTO_BUY_PASS:
-                data = await self.get_tap_passes(http_client=http_client)
-                if data.get('active_tap_pass') is None and balance >= 1000:
-                    status = await self.buy_tap_pass(http_client=http_client)
-                    if status:
-                        logger.success(
-                            f'<light-yellow>{self.session_name}</light-yellow> | Bought taps pass for 7 days')
-
-            if settings.AUTO_TAP:
-                taps = await self.get_taps(http_client=http_client)
-                if taps != 0:
-                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | You have {taps} taps "
-                                f"available, starting clicking, please wait a bit..")
-                    status = await self.do_taps(http_client=http_client, taps=taps)
-                    if status:
-                        logger.success(f"<light-yellow>{self.session_name}</light-yellow> | Successfully tapped "
-                                       f"{taps} times")
-                    else:
-                        logger.warning(f"<light-yellow>{self.session_name}</light-yellow> | Problem with taps")
-
-            if settings.AUTO_MISSION:
-                missions = await self.get_missions(http_client=http_client)
-                missions.sort()
-                for id in missions:
-                    status = await self.do_mission(http_client=http_client, id=id)
-                    if status:
-                        logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
-                                    f"Successfully done mission {id}")
-                    await asyncio.sleep(0.75)
-
-            if settings.AUTO_LVL_UP:
                 info = await self.get_balance(http_client=http_client)
                 balance = info.get("balance") or 0
-                lvl, available, price = await self.get_level_info(http_client=http_client)
-                if available and price <= balance:
-                    status = await self.level_up(http_client=http_client)
+                logger.info(f'<light-yellow>{self.session_name}</light-yellow> | Balance: {balance}')
+
+                tokens = await self.daily_claim(http_client=http_client)
+                if tokens is not False:
+                    logger.success(f'<light-yellow>{self.session_name}</light-yellow> | Daily claimed: {tokens} AGO')
+
+                if settings.AUTO_BUY_PASS:
+                    data = await self.get_tap_passes(http_client=http_client)
+                    if data.get('active_tap_pass') is None and balance >= 1000:
+                        status = await self.buy_tap_pass(http_client=http_client)
+                        if status:
+                            logger.success(
+                                f'<light-yellow>{self.session_name}</light-yellow> | Bought taps pass for 7 days')
+
+                if settings.AUTO_TAP:
+                    taps = await self.get_taps(http_client=http_client)
+                    if taps != 0:
+                        logger.info(f"<light-yellow>{self.session_name}</light-yellow> | You have {taps} taps "
+                                    f"available, starting clicking, please wait a bit..")
+                        status = await self.do_taps(http_client=http_client, taps=taps)
+                        if status:
+                            logger.success(f"<light-yellow>{self.session_name}</light-yellow> | Successfully tapped "
+                                           f"{taps} times")
+                        else:
+                            logger.warning(f"<light-yellow>{self.session_name}</light-yellow> | Problem with taps")
+
+                if settings.AUTO_MISSION:
+                    missions = await self.get_missions(http_client=http_client)
+                    missions.sort()
+                    for id in missions:
+                        status = await self.do_mission(http_client=http_client, id=id)
+                        if status:
+                            logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
+                                        f"Successfully done mission {id}")
+                        await asyncio.sleep(0.75)
+
+                if settings.AUTO_LVL_UP:
+                    info = await self.get_balance(http_client=http_client)
+                    balance = info.get("balance") or 0
+                    lvl, available, price = await self.get_level_info(http_client=http_client)
+                    if available and price <= balance:
+                        status = await self.level_up(http_client=http_client)
+                        if status:
+                            logger.success(f"<light-yellow>{self.session_name}</light-yellow> | "
+                                           f"Successfully level up, now {lvl + 1}")
+
+                if settings.PLAY_WALK_GAME:
+                    status = await self.play_game_1(http_client=http_client)
                     if status:
-                        logger.success(f"<light-yellow>{self.session_name}</light-yellow> | "
-                                       f"Successfully level up, now {lvl + 1}")
+                        logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
+                                    f"Successfully played walk game")
+                    else:
+                        logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
+                                    f"Walk game cooldown")
 
-            if settings.PLAY_WALK_GAME:
-                status = await self.play_game_1(http_client=http_client)
-                if status:
-                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
-                                f"Successfully played walk game")
-                else:
-                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
-                                f"Walk game cooldown")
+                if settings.PLAY_SHOOT_GAME:
+                    status = await self.play_game_2(http_client=http_client)
+                    if status:
+                        logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
+                                    f"Successfully played shoot game")
+                    else:
+                        logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
+                                    f"Shoot game cooldown")
 
-            if settings.PLAY_SHOOT_GAME:
-                status = await self.play_game_2(http_client=http_client)
-                if status:
-                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
-                                f"Successfully played shoot game")
-                else:
-                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
-                                f"Shoot game cooldown")
+                if settings.PLAY_RPG_GAME:
+                    status = await self.play_game_5(http_client=http_client)
+                    if status:
+                        logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
+                                    f"Successfully played RPG game")
+                    else:
+                        logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
+                                    f"RPG game cooldown")
 
-            if settings.PLAY_RPG_GAME:
-                status = await self.play_game_5(http_client=http_client)
-                if status:
-                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
-                                f"Successfully played RPG game")
-                else:
-                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
-                                f"RPG game cooldown")
+                if settings.PLAY_DIRTY_JOB_GAME:
+                    await self.play_game_3(http_client=http_client)
 
-            if settings.PLAY_DIRTY_JOB_GAME:
-                await self.play_game_3(http_client=http_client)
+                logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Going sleep 1 hour")
 
-            logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Going sleep 1 hour")
+                http_client.headers['Host'] = 'ago-api.onrender.com'
 
-            http_client.headers['Host'] = 'ago-api.onrender.com'
+                await asyncio.sleep(3600)
 
-            await asyncio.sleep(3600)
+            except InvalidSession as error:
+                raise error
 
-            #except InvalidSession as error:
-            #    raise error
-#
-            #except Exception as error:
-            #    logger.error(f"{self.session_name} | Unknown error: {error}")
-            #    await asyncio.sleep(delay=3)
-            #    continue
+            except Exception as error:
+                logger.error(f"{self.session_name} | Unknown error: {error}")
+                await asyncio.sleep(delay=3)
+                continue
 
 
 async def run_tapper(tg_client: Client, proxy: str | None):

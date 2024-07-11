@@ -154,7 +154,7 @@ class Tapper:
 
     async def auth(self, http_client: aiohttp.ClientSession):
         try:
-            json = {"user_id": self.user_id, "username": self.username}
+            json = {"user_id": int(self.user_id), "username": str(self.username)}
             response = await http_client.post(url='https://ago-api.onrender.com/api/app-auth', json=json)
             response.raise_for_status()
             response_json = await response.json()

@@ -498,7 +498,7 @@ class Tapper:
         proxy_conn = ProxyConnector().from_url(proxy) if proxy else None
 
         http_client = aiohttp.ClientSession(headers=headers,
-                                            connector=aiohttp.TCPConnector(ssl=False, verify_ssl=False))
+                                            connector=aiohttp.TCPConnector(ssl=False))
 
         if proxy:
             await self.check_proxy(http_client=http_client, proxy=proxy)

@@ -166,6 +166,7 @@ class Tapper:
                         "referer_id": f"{referer_id}"}
                 response = await http_client.post(url='https://ago-api.onrender.com/api/create-user', json=json)
                 if response.status in (200, 201):
+                    json = {}
                     return True
                 elif response.status == 409:
                     json = {}
@@ -181,8 +182,7 @@ class Tapper:
                 return False
         except Exception as error:
             logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while register {error}")
-            logger.debug(f'<light-yellow>{self.session_name}</light-yellow> | {json} | {response.status} | '
-                         f'{await response.text()}')
+            logger.debug(f'<light-yellow>{self.session_name}</light-yellow> | {json}')
 
     async def auth(self, http_client: aiohttp.ClientSession):
         try:

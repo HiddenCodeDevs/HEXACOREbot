@@ -165,9 +165,9 @@ class Tapper:
                 if self.username != '':
                     json = {
                         "user_id": int(self.user_id),  # Ensure user_id is a string
-                        "fullname": f"{self.fullname}",
-                        "username": f"{self.username}",
-                        "referer_id": f"{referer_id}"
+                        "fullname": f"{str(self.fullname)}",
+                        "username": f"{str(self.username)}",
+                        "referer_id": f"{str(referer_id)}"
                     }
 
                 if self.username != '':

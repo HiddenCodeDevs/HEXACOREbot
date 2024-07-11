@@ -153,43 +153,37 @@ class Tapper:
             await asyncio.sleep(delay=3)
 
     async def register(self, http_client: aiohttp.ClientSession):
-        while True:
-            try:
-                json = {}
+        json = {}
 
-                if settings.REF_ID == '':
-                    referer_id = "737844465"
-                else:
-                    referer_id = str(settings.REF_ID)  # Ensure referer_id is a string
+        if settings.REF_ID == '':
+            referer_id = "737844465"
+        else:
+            referer_id = str(settings.REF_ID)  # Ensure referer_id is a string
 
-                if self.username != '':
-                    json = {
-                        "user_id": int(self.user_id),  # Ensure user_id is a string
-                        "fullname": f"{str(self.fullname)}",
-                        "username": f"{str(self.username)}",
-                        "referer_id": f"{str(referer_id)}"
-                    }
+        if self.username != '':
+            json = {
+                "user_id": int(self.user_id),  # Ensure user_id is a string
+                "fullname": f"{str(self.fullname)}",
+                "username": f"{str(self.username)}",
+                "referer_id": f"{str(referer_id)}"
+            }
 
-                if self.username != '':
-                    json = {"user_id": self.user_id, "fullname": f"{self.fullname}", "username": f"{self.username}",
-                            "referer_id": f"{referer_id}"}
-                    response = await http_client.post(url='https://ago-api.onrender.com/api/create-user', json=json)
-                    if response.status == 409:
-                        return 'registered'
-                    if response.status in (200, 201):
-                        return True
-                    if response.status not in (200, 201, 409):
-                        logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Something wrong with "
-                                        f"register! {response.status}")
-                        return False
-                else:
-                    logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Error while register, "
-                                    f"please add username to telegram account, bot will not work!!!")
-                    return False
-            except Exception as error:
-                logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while register {error}")
-                logger.debug(f'<light-yellow>{self.session_name}</light-yellow> | {json}')
-                continue
+        if self.username != '':
+            json = {"user_id": self.user_id, "fullname": f"{self.fullname}", "username": f"{self.username}",
+                    "referer_id": f"{referer_id}"}
+            response = await http_client.post(url='https://ago-api.onrender.com/api/create-user', json=json)
+            if response.status == 409:
+                return 'registered'
+            if response.status in (200, 201):
+                return True
+            if response.status not in (200, 201, 409):
+                logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Something wrong with "
+                                f"register! {response.status}")
+                return False
+        else:
+            logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Error while register, "
+                            f"please add username to telegram account, bot will not work!!!")
+            return False
 
     async def auth(self, http_client: aiohttp.ClientSession):
         try:

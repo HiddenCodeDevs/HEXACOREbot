@@ -174,13 +174,14 @@ class Tapper:
                     json = {"user_id": self.user_id, "fullname": f"{self.fullname}", "username": f"{self.username}",
                             "referer_id": f"{referer_id}"}
                     response = await http_client.post(url='https://ago-api.onrender.com/api/create-user', json=json)
+                    response.raise_for_status()
                     if response.status in (200, 201):
                         return True
                     elif response.status == 409:
                         return 'registered'
                     else:
                         logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Something wrong with "
-                                        f"register!")
+                                        f"register! {response.status}")
                         return False
                 else:
                     logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Error while register, "

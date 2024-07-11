@@ -487,15 +487,14 @@ class Tapper:
         await self.get_tg_web_data(proxy=proxy)
 
         http_client.headers['Authorization'] = await self.auth(http_client=http_client)
-
-        status = await self.register(http_client=http_client)
-        if status is True:
-            logger.success(f"<light-yellow>{self.session_name}</light-yellow> | Successfully account register")
-        elif status == 'registered':
-            pass
-
         while True:
             try:
+                status = await self.register(http_client=http_client)
+                if status is True:
+                    logger.success(f"<light-yellow>{self.session_name}</light-yellow> | Successfully account register")
+                elif status == 'registered':
+                    pass
+
                 info = await self.get_balance(http_client=http_client)
                 balance = info.get("balance") or 0
                 logger.info(f'<light-yellow>{self.session_name}</light-yellow> | Balance: {balance}')
@@ -586,6 +585,7 @@ class Tapper:
             except Exception as error:
                 logger.error(f"{self.session_name} | Unknown error: {error}")
                 await asyncio.sleep(delay=3)
+                continue
 
 
 async def run_tapper(tg_client: Client, proxy: str | None):

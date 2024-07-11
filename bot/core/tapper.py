@@ -175,11 +175,11 @@ class Tapper:
                             "referer_id": f"{referer_id}"}
                     response = await http_client.post(url='https://ago-api.onrender.com/api/create-user', json=json)
                     response.raise_for_status()
-                    if response.status in (200, 201):
-                        return True
                     if response.status == 409:
                         return 'registered'
-                    else:
+                    if response.status in (200, 201):
+                        return True
+                    if response.status not in (200, 201, 409):
                         logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Something wrong with "
                                         f"register! {response.status}")
                         return False

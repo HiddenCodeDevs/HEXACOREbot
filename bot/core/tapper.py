@@ -177,7 +177,7 @@ class Tapper:
                     response.raise_for_status()
                     if response.status in (200, 201):
                         return True
-                    elif response.status == 409:
+                    if response.status == 409:
                         return 'registered'
                     else:
                         logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Something wrong with "

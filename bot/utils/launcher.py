@@ -14,7 +14,13 @@ from bot.core.registrator import register_sessions
 
 start_text = """
 
-#ASCII текст сюда
+██╗  ██╗███████╗██╗  ██╗ █████╗  ██████╗ ██████╗ ██████╗ ███████╗██████╗  ██████╗ ████████╗
+██║  ██║██╔════╝╚██╗██╔╝██╔══██╗██╔════╝██╔═══██╗██╔══██╗██╔════╝██╔══██╗██╔═══██╗╚══██╔══╝
+███████║█████╗   ╚███╔╝ ███████║██║     ██║   ██║██████╔╝█████╗  ██████╔╝██║   ██║   ██║   
+██╔══██║██╔══╝   ██╔██╗ ██╔══██║██║     ██║   ██║██╔══██╗██╔══╝  ██╔══██╗██║   ██║   ██║   
+██║  ██║███████╗██╔╝ ██╗██║  ██║╚██████╗╚██████╔╝██║  ██║███████╗██████╔╝╚██████╔╝   ██║   
+╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═════╝  ╚═════╝    ╚═╝   
+                                                                                           
 
 Select an action:
 
@@ -26,7 +32,7 @@ global tg_clients
 
 
 def get_session_names() -> list[str]:
-    session_names = glob.glob("sessions/*.session")
+    session_names = sorted(glob.glob("sessions/*.session"))
     session_names = [
         os.path.splitext(os.path.basename(file))[0] for file in session_names
     ]

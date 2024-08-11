@@ -604,7 +604,7 @@ class Tapper:
 
                 logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Going sleep 1 hour")
 
-                http_client.headers['Host'] = 'ago-api.onrender.com'
+                http_client.headers['Host'] = 'ago-api.hexacore.io'
 
                 await asyncio.sleep(3600)
 

@@ -3,7 +3,7 @@ headers = {
     'Accept-Language': 'ru-RU,ru;q=0.9',
     'Connection': 'keep-alive',
     'Content-Type': 'application/json',
-    'Host': 'ago-api.onrender.com',
+    'Host': 'ago-api.hexacore.io',
     'Origin': 'https://ago-wallet.hexacore.io',
     'Referer': 'https://ago-wallet.hexacore.io/',
     'Sec-Fetch-Dest': 'empty',

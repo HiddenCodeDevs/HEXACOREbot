@@ -23,19 +23,20 @@
 
 
 ## [Settings](https://github.com/HiddenCodeDevs/HEXACOREbot/blob/main/.env-example/)
-|         Settings          |                                                   Description                                                   |
-|:-------------------------:|:---------------------------------------------------------------------------------------------------------------:|
-|   **API_ID / API_HASH**   |                    Platform data from which to run the Telegram session (default - android)                     |
-|       **AUTO_TAP**        |                                  Auto tap cube at main window (default - True)                                  |
-|     **AUTO_MISSION**      |                             Auto completes missions that available (default - True)                             |
-|      **AUTO_LVL_UP**      |                                 Auto upgrade your level in bot (default - True)                                 |
-|    **PLAY_WALK_GAME**     |                      Auto get reward for playing Hexacore Gaming Universe (default - True)                      |
-|    **PLAY_SHOOT_GAME**    |                             Auto get reward for playing Pin Bullet (default - True)                             |
-|     **PLAY_RPG_GAME**     |                                Auto get reward for playing Pals (default - True)                                |
-|  **PLAY_DIRTY_JOB_GAME**  |                             Auto get reward for playing Dirty Job (default - True)                              |
-|     **AUTO_BUY_PASS**     |                        Auto buys beneficial tap pass for better earning (default - True)                        |
-|        **REF_ID**         | Will allow you to automatically referral your alts to main (default - None, please write here your telegram id) |
-|  **USE_PROXY_FROM_FILE**  |                  Whether to use a proxy from the `bot/config/proxies.txt` file (True / False)                   |
+|          Settings          |                                                   Description                                                   |
+|:--------------------------:|:---------------------------------------------------------------------------------------------------------------:|
+|   **API_ID / API_HASH**    |                    Platform data from which to run the Telegram session (default - android)                     |
+|        **AUTO_TAP**        |                                  Auto tap cube at main window (default - True)                                  |
+|      **AUTO_MISSION**      |                             Auto completes missions that available (default - True)                             |
+|      **AUTO_LVL_UP**       |                                 Auto upgrade your level in bot (default - True)                                 |
+|     **PLAY_WALK_GAME**     |                      Auto get reward for playing Hexacore Gaming Universe (default - True)                      |
+|    **PLAY_SHOOT_GAME**     |                             Auto get reward for playing Pin Bullet (default - True)                             |
+|     **PLAY_RPG_GAME**      |                                Auto get reward for playing Pals (default - True)                                |
+|  **PLAY_DIRTY_JOB_GAME**   |                             Auto get reward for playing Dirty Job (default - True)                              |
+| **PLAY_HURTMEPLEASE_GAME** |                        Auto get reward for playing Hurt me please game (default - True)                         |
+|     **AUTO_BUY_PASS**      |                        Auto buys beneficial tap pass for better earning (default - True)                        |
+|         **REF_ID**         | Will allow you to automatically referral your alts to main (default - None, please write here your telegram id) |
+|  **USE_PROXY_FROM_FILE**   |                  Whether to use a proxy from the `bot/config/proxies.txt` file (True / False)                   |
 
 ## Quick Start 📚
 

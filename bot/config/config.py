@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     PLAY_SHOOT_GAME: bool = True
     PLAY_RPG_GAME: bool = True
     PLAY_DIRTY_JOB_GAME: bool = True
+    PLAY_HURTMEPLEASE_GAME: bool = True
+
     AUTO_BUY_PASS: bool = True
 
     REF_ID: str = ''

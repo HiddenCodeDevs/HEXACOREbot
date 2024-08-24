@@ -484,8 +484,17 @@ class Tapper:
             response_json = await response.json()
 
             status = response_json.get('is_available')
-            day = response_json.get('day')
-            return status, day
+            next_day = response_json.get('next')
+
+            if status is True:
+                json_payload = {"day": next_day}
+                response_daily = await http_client.post(url=f'https://ago-api.hexacore.io/api/daily-checkin',
+                                                        json=json_payload, ssl=False)
+                response_json_daily = await response_daily.json()
+                if response_json_daily.get('success') is True:
+                    return True, next_day
+                else:
+                    return False, None
         except Exception as error:
             logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while daily reward {error}")
 
@@ -541,10 +550,10 @@ class Tapper:
                 balance = info.get("balance") or 0
                 logger.info(f'<light-yellow>{self.session_name}</light-yellow> | Balance: {balance}')
 
-                status, day = await self.daily_checkin(http_client=http_client)
+                status, next_day = await self.daily_checkin(http_client=http_client)
                 if status is not False:
                     logger.success(f'<light-yellow>{self.session_name}</light-yellow> | Daily checkin claimed, '
-                                   f'streak - {day}')
+                                   f'streak - {next_day}')
 
                 if settings.AUTO_BUY_PASS:
                     data = await self.get_tap_passes(http_client=http_client)

@@ -551,7 +551,7 @@ class Tapper:
                 logger.info(f'<light-yellow>{self.session_name}</light-yellow> | Balance: {balance}')
 
                 status, next_day = await self.daily_checkin(http_client=http_client)
-                if status is not False:
+                if status is True and next_day is not None:
                     logger.success(f'<light-yellow>{self.session_name}</light-yellow> | Daily checkin claimed, '
                                    f'streak - {next_day}')
 

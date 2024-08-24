@@ -495,6 +495,8 @@ class Tapper:
                     return True, next_day
                 else:
                     return False, None
+            else:
+                return False, None
         except Exception as error:
             logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while daily reward {error}")
 

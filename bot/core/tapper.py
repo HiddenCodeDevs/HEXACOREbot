@@ -1,4 +1,5 @@
 import asyncio
+import time
 from urllib.parse import unquote
 
 import aiohttp
@@ -26,6 +27,7 @@ class Tapper:
         self.first_name = None
         self.last_name = None
         self.fullname = None
+        self.time_end = 0
 
         self.session_ug_dict = self.load_user_agents() or []
 
@@ -449,30 +451,40 @@ class Tapper:
 
     async def play_game_6(self, http_client: aiohttp.ClientSession):
         try:
-            response = await http_client.get(url=f'https://hurt-me-please-server.hexacore.io/game/start?playerId='
-                                                 f'{self.user_id}', ssl=False)
-            response.raise_for_status()
-            response_json = await response.json()
+            if self.time_end < int(time.time()):
+                response = await http_client.get(url=f'https://hurt-me-please-server.hexacore.io/game/start?playerId='
+                                                     f'{self.user_id}', ssl=False)
+                response.raise_for_status()
+                response_json = await response.json()
 
-            level = response_json.get('playerState').get('currentGameLevel')
+                current_level = response_json.get('playerState').get('currentGameLevel')
+                if current_level == 0:
+                    current_level = 1
 
-            games_count = len(response_json.get('gameConfig').get('gameLevels', {}))
+                limit = response_json.get('gameConfig').get('freeSessionGameLevelsMaxCount')
 
-            for i in range(level + 1, games_count):
-                json = {"type": "EndGameLevelEvent", "level": i, "agoClaimed": 100, "boosted": False,
-                        "transactionId": None}
-                response1 = await http_client.post(url=f'https://hurt-me-please-server.hexacore.io/game/event',
-                                                   json=json, ssl=False)
+                while limit != 0:
+                    json = {"type": "EndGameLevelEvent", "level": current_level, "agoClaimed": 99.75, "boosted": False,
+                            "transactionId": None}
+                    response1 = await http_client.post(url=f'https://hurt-me-please-server.hexacore.io/game/event',
+                                                       json=json, ssl=False)
 
-                if response1.status in (200, 201):
-                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Done {i} lvl in Hurt me please")
+                    if response1.status in (200, 201):
+                        logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Done {current_level} lvl in "
+                                    f"Hurt me please")
 
-                elif response1.status == 400:
-                    logger.warning(f"<light-yellow>{self.session_name}</light-yellow> | Reached max games for today in "
-                                   f"Hurt me please")
-                    break
+                    current_level += 1
+                    limit -= 1
 
-                await asyncio.sleep(1)
+                    await asyncio.sleep(0.2)
+
+                response = await http_client.get(url=f'https://hurt-me-please-server.hexacore.io/game/start?playerId='
+                                                     f'{self.user_id}', ssl=False)
+                response.raise_for_status()
+                response_json = await response.json()
+
+                cooldown_time = response_json.get('playerState').get('sessionGameLevelsCountResetTimestamp')
+                self.time_end = cooldown_time
 
         except Exception as error:
             logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while play game Hurt me please"

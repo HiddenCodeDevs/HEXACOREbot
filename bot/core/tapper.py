@@ -1,10 +1,10 @@
 import asyncio
+import random
 import time
 from urllib.parse import unquote
 
 import aiohttp
 import json
-from aiocfscrape import CloudflareScraper
 from aiohttp_proxy import ProxyConnector
 from better_proxy import Proxy
 from pyrogram import Client
@@ -112,8 +112,8 @@ class Tapper:
                 except FloodWait as fl:
                     fls = fl.value
 
-                    logger.warning(f"{self.session_name} | FloodWait {fl}")
-                    logger.info(f"{self.session_name} | Sleep {fls}s")
+                    logger.warning(f"<light-yellow>{self.session_name}</light-yellow> | FloodWait {fl}")
+                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Sleep {fls}s")
 
                     await asyncio.sleep(fls + 3)
 
@@ -151,7 +151,7 @@ class Tapper:
             raise error
 
         except Exception as error:
-            logger.error(f"{self.session_name} | Unknown error during Authorization: {error}")
+            logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Unknown error during Authorization: {error}")
             await asyncio.sleep(delay=3)
 
     async def auth(self, http_client: aiohttp.ClientSession, init_data):
@@ -186,8 +186,12 @@ class Tapper:
                 }
 
             if self.username != '':
-                json = {"user_id": self.user_id, "fullname": f"{self.fullname}", "username": f"{self.username}",
-                        "referer_id": f"{referer_id}"}
+                json = {
+                    "user_id": int(self.user_id),  # Ensure user_id is a string
+                    "fullname": f"{str(self.fullname)}",
+                    "username": f"{str(self.username)}",
+                    "referer_id": f"{str(referer_id)}"
+                }
                 response = await http_client.post(url='https://ago-api.hexacore.io/api/create-user', json=json,
                                                   ssl=False)
                 #print(await response.text())
@@ -211,7 +215,9 @@ class Tapper:
         try:
             response = await http_client.get(url='https://ago-api.hexacore.io/api/available-taps', ssl=False)
             response_json = await response.json()
-            return response_json.get('available_taps')
+            taps = response_json.get('available_taps')
+            boosters = response_json.get('available_boosters')
+            return taps, boosters
         except Exception as error:
             logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while get taps {error}")
 
@@ -237,6 +243,15 @@ class Tapper:
 
         except Exception as error:
             logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while do taps {error}")
+
+    async def use_booster(self, http_client: aiohttp.ClientSession):
+        try:
+            response = await http_client.post("https://ago-api.hexacore.io/api/activate-boosters", ssl=False)
+            resp_json = await response.json()
+            success = resp_json.get('success')
+            return success
+        except Exception as error:
+            logger.error(f"<light-yellow>{self.session_name}</light-yellow> | use booster error - {error}")
 
     async def get_missions(self, http_client: aiohttp.ClientSession):
         try:
@@ -266,11 +281,12 @@ class Tapper:
             response = await http_client.get(url=f'https://ago-api.hexacore.io/api/level', ssl=False)
             response_json = await response.json()
             lvl = response_json.get('lvl')
-            upgrade_available = response_json.get('upgrade_available')
-            upgrade_price = response_json.get('upgrade_price')
+            upgrade_available = response_json.get('upgrade_available', None)
+            upgrade_price = response_json.get('upgrade_price', None)
+            new_lvl = response_json.get('next_lvl', None)
             return (lvl,
                     upgrade_available,
-                    upgrade_price)
+                    upgrade_price, new_lvl)
         except Exception as error:
             logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while get level {error}")
 
@@ -320,8 +336,12 @@ class Tapper:
 
     async def play_game_3(self, http_client: aiohttp.ClientSession):
         try:
-            response = await http_client.get(url=f'https://dirty-job-server.hexacore.io/game/start?playerId='
-                                                 f'{self.user_id}', ssl=False)
+            response = await http_client.post(url=f'https://ago-api.hexacore.io/api/games/3/sessions/start', ssl=False)
+            #print(await response.text())
+            response = await http_client.get(url=f'https://dirty-job-server.hexacore.io/game/start?'
+                                                 f'playerId={self.user_id}', ssl=False)
+            text = await response.text()
+            #print(response.status, text[:64])
             response.raise_for_status()
             response_json = await response.json()
 
@@ -330,7 +350,7 @@ class Tapper:
             games_count = len(response_json.get('gameConfig').get('gameLevels', {}))
 
             for i in range(level + 1, games_count):
-                json = {"type": "EndGameLevelEvent", "playerId": self.user_id, "level": i, "boosted": False,
+                json = {"type": "EndGameLevelEvent", "playerId": str(self.user_id), "level": int(i), "boosted": False,
                         "transactionId": None}
                 response1 = await http_client.post(url=f'https://dirty-job-server.hexacore.io/game/end-game-level',
                                                    json=json, ssl=False)
@@ -345,23 +365,18 @@ class Tapper:
 
                 await asyncio.sleep(1)
 
-            response1 = await http_client.get(
-                url=f'https://dirty-job-server.hexacore.io/game/start?playerId={self.user_id}', ssl=False)
-            response1_json = await response1.json()
-
-            balance = response1_json.get('playerState').get('inGameCurrencyCount')
-            hub_items_owned = response1_json.get('playerState').get('hubItems')
-            game_config_hub_items = response1_json.get('gameConfig').get('hubItems')
+            balance = response_json.get('playerState').get('inGameCurrencyCount')
+            owned_items = response_json.get('playerState').get('hubItems')
+            available_items = response_json.get('gameConfig').get('hubItems')
 
             logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Trying to upgrade items in dirty job, "
                         f"wait a bit")
-            await self.auto_purchase_upgrades(http_client, balance, hub_items_owned, game_config_hub_items)
-        except Exception as error:
-            logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while play game 3 {error}")
 
-    async def auto_purchase_upgrades(self, http_client: aiohttp.ClientSession, balance: int, owned_items: dict,
-                                     available_items: dict):
-        try:
+            old_auth = http_client.headers['Authorization']
+
+            if http_client.headers['Authorization']:
+                del http_client.headers['Authorization']
+
             for item_name, item_info in available_items.items():
                 if item_name not in owned_items:
                     upgrade_level_info = list(map(int, item_info['levels'].keys()))
@@ -372,9 +387,9 @@ class Tapper:
                     if balance >= price:
                         purchase_data = {
                             "type": "UpgradeHubItemEvent",
-                            "playerId": f"{self.user_id}",
-                            "itemId": f"{item_name}",
-                            "level": upgrade_level_info[0]
+                            "playerId": str(self.user_id),
+                            "itemId": str(item_name),
+                            "level": int(upgrade_level_info[0])
                         }
                         purchase_response = await http_client.post(
                             url='https://dirty-job-server.hexacore.io/game/upgrade-hub-item',
@@ -388,7 +403,8 @@ class Tapper:
                             owned_items[item_name] = {'level': upgrade_level_info[0]}
                         else:
                             logger.warning(
-                                f"Failed to purchase new item {item_name}. Status code: {purchase_response.status}")
+                                f"Failed to purchase new item {item_name}. Status code: {purchase_response.status}, text:"
+                                f" {await purchase_response.text()}, headers - \n{http_client.headers}")
 
                 elif item_name in owned_items:
                     current_level = int(owned_items[item_name]['level'])
@@ -407,9 +423,9 @@ class Tapper:
                         if balance >= price:
                             purchase_data = {
                                 "type": "UpgradeHubItemEvent",
-                                "playerId": f"{self.user_id}",
-                                "itemId": f"{item_name}",
-                                "level": level
+                                "playerId": str({self.user_id}),
+                                "itemId": str({item_name}),
+                                "level": int(level)
                             }
                             purchase_response = await http_client.post(
                                 url='https://dirty-job-server.hexacore.io/game/upgrade-hub-item',
@@ -428,12 +444,13 @@ class Tapper:
 
                 await asyncio.sleep(0.5)
 
+            http_client.headers['Authorization'] = old_auth
         except Exception as error:
-            logger.error(
-                f"<light-yellow>{self.session_name}</light-yellow> | Error during auto-purchase upgrades {error}")
+            logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while play game 3 {error}")
 
     async def play_game_5(self, http_client: aiohttp.ClientSession):
         try:
+            response = await http_client.post("https://ago-api.hexacore.io/api/games/5/sessions/start", ssl=False)
             response = await http_client.get(url=f'https://ago-api.hexacore.io/api/in-game-reward-available/5/'
                                                  f'{self.user_id}', ssl=False)
             response_json = await response.json()
@@ -451,40 +468,48 @@ class Tapper:
 
     async def play_game_6(self, http_client: aiohttp.ClientSession):
         try:
-            if self.time_end < int(time.time()):
-                response = await http_client.get(url=f'https://hurt-me-please-server.hexacore.io/game/start?playerId='
-                                                     f'{self.user_id}', ssl=False)
-                response.raise_for_status()
-                response_json = await response.json()
+            old_auth = http_client.headers['Authorization']
 
-                current_level = response_json.get('playerState').get('currentGameLevel')
-                if current_level == 0:
-                    current_level = 1
+            response = await http_client.post("https://ago-api.hexacore.io/api/games/6/sessions/start", ssl=False)
 
-                limit = response_json.get('gameConfig').get('freeSessionGameLevelsMaxCount')
+            http_client.headers['Authorization'] = str(self.user_id)
 
-                while limit != 0:
-                    json = {"type": "EndGameLevelEvent", "level": current_level, "agoClaimed": 99.75, "boosted": False,
-                            "transactionId": None}
-                    response1 = await http_client.post(url=f'https://hurt-me-please-server.hexacore.io/game/event',
-                                                       json=json, ssl=False)
+            response = await http_client.get(url=f'https://hurt-me-please-server.hexacore.io/game/start', ssl=False)
+            response.raise_for_status()
+            response_json = await response.json()
 
-                    if response1.status in (200, 201):
-                        logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Done {current_level} lvl in "
-                                    f"Hurt me please")
+            current_level = response_json.get('playerState').get('currentGameLevel')
+            if current_level == 0:
+                current_level = 1
+            else:
+                current_level += 1
 
-                    current_level += 1
-                    limit -= 1
+            limit = response_json.get('gameConfig').get('freeSessionGameLevelsMaxCount')
+            if limit == 0:
+                logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Hurt me game cooldown")
 
-                    await asyncio.sleep(0.2)
+            while limit != 0:
+                json = {"type": "EndGameLevelEvent",
+                        "level": int(current_level),
+                        "agoClaimed": float(99.75+random.randint(1, 5)),
+                        "boosted": False,
+                        "transactionId": None}
 
-                response = await http_client.get(url=f'https://hurt-me-please-server.hexacore.io/game/start?playerId='
-                                                     f'{self.user_id}', ssl=False)
-                response.raise_for_status()
-                response_json = await response.json()
+                response1 = await http_client.post(url=f'https://hurt-me-please-server.hexacore.io/game/event',
+                                                   json=json, ssl=False)
 
-                cooldown_time = response_json.get('playerState').get('sessionGameLevelsCountResetTimestamp')
-                self.time_end = cooldown_time
+                if response1.status in (200, 201):
+                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Done {current_level} lvl in "
+                                f"Hurt me please")
+                else:
+                    logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Hurt me game cooldown")
+                    break
+                current_level += 1
+                limit -= 1
+
+                await asyncio.sleep(0.5)
+
+            http_client.headers['Authorization'] = old_auth
 
         except Exception as error:
             logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Error while play game Hurt me please"
@@ -536,9 +561,9 @@ class Tapper:
         try:
             response = await http_client.get(url='https://httpbin.org/ip', timeout=aiohttp.ClientTimeout(45), ssl=False)
             ip = (await response.json()).get('origin')
-            logger.info(f"{self.session_name} | Proxy IP: {ip}")
+            logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Proxy IP: {ip}")
         except Exception as error:
-            logger.error(f"{self.session_name} | Proxy: {proxy} | Error: {error}")
+            logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Proxy: {proxy} | Error: {error}")
 
     async def run(self, proxy: str | None) -> None:
         proxy_conn = ProxyConnector().from_url(proxy) if proxy else None
@@ -570,16 +595,22 @@ class Tapper:
                                    f'streak - {next_day}')
 
                 if settings.AUTO_BUY_PASS:
-                    data = await self.get_tap_passes(http_client=http_client)
-                    if data.get('active_tap_pass') is None and balance >= 1000:
-                        status = await self.buy_tap_pass(http_client=http_client)
-                        if status:
-                            logger.success(
-                                f'<light-yellow>{self.session_name}</light-yellow> | Bought taps pass for 7 days')
+                    logger.critical(f"<light-yellow>{self.session_name}</light-yellow> | Passes wont work, tg bot issue, not buying")
+                    #data = await self.get_tap_passes(http_client=http_client)
+                    #if data.get('active_tap_pass') is None and balance >= 1000:
+                    #    status = await self.buy_tap_pass(http_client=http_client)
+                    #    if status:
+                    #        logger.success(
+                    #            f'<light-yellow>{self.session_name}</light-yellow> | Bought taps pass for 7 days')
 
                 if settings.AUTO_TAP:
-                    taps = await self.get_taps(http_client=http_client)
+                    taps, boosters = await self.get_taps(http_client=http_client)
                     if taps != 0:
+                        if boosters != 0:
+                            status = await self.use_booster(http_client)
+                            if status:
+                                logger.success(f"<light-yellow>{self.session_name}</light-yellow> | Used booster")
+
                         logger.info(f"<light-yellow>{self.session_name}</light-yellow> | You have {taps} taps "
                                     f"available, starting clicking, please wait a bit..")
                         status = await self.do_taps(http_client=http_client, taps=taps)
@@ -597,17 +628,20 @@ class Tapper:
                         if status:
                             logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
                                         f"Successfully done mission {id}")
-                        await asyncio.sleep(0.75)
+                        await asyncio.sleep(0.1)
 
                 if settings.AUTO_LVL_UP:
                     info = await self.get_balance(http_client=http_client)
                     balance = info.get("balance") or 0
-                    lvl, available, price = await self.get_level_info(http_client=http_client)
+                    lvl, available, price, new_lvl = await self.get_level_info(http_client=http_client)
                     if available and price <= balance:
-                        status = await self.level_up(http_client=http_client)
-                        if status:
-                            logger.success(f"<light-yellow>{self.session_name}</light-yellow> | "
-                                           f"Successfully level up, now {lvl + 1}")
+                        if new_lvl:
+                            status = await self.level_up(http_client=http_client)
+                            if status:
+                                logger.success(f"<light-yellow>{self.session_name}</light-yellow> | "
+                                               f"Successfully level up, now {new_lvl} lvl available")
+                        else:
+                            logger.info(f"<light-yellow>{self.session_name}</light-yellow> | You reached max lvl - 25")
 
                 if settings.PLAY_WALK_GAME:
                     status = await self.play_game_1(http_client=http_client)
@@ -650,7 +684,7 @@ class Tapper:
                 raise error
 
             except Exception as error:
-                logger.error(f"{self.session_name} | Unknown error: {error}")
+                logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Unknown error: {error}")
                 await asyncio.sleep(delay=3)
                 continue
 

@@ -576,9 +576,9 @@ class Tapper:
 
         init_data = await self.get_tg_web_data(proxy=proxy)
 
-        http_client.headers['Authorization'] = await self.auth(http_client=http_client, init_data=init_data)
         while True:
             try:
+                http_client.headers['Authorization'] = await self.auth(http_client=http_client, init_data=init_data)
                 status = await self.register(http_client=http_client, init_data=init_data)
                 if status is True:
                     logger.success(f"<light-yellow>{self.session_name}</light-yellow> | Successfully account register")
@@ -622,13 +622,15 @@ class Tapper:
 
                 if settings.AUTO_MISSION:
                     missions = await self.get_missions(http_client=http_client)
+                    if missions is None:
+                        continue
                     missions.sort()
                     for id in missions:
                         status = await self.do_mission(http_client=http_client, id=id)
                         if status:
                             logger.info(f"<light-yellow>{self.session_name}</light-yellow> | "
                                         f"Successfully done mission {id}")
-                        await asyncio.sleep(0.1)
+                        await asyncio.sleep(5)
 
                 if settings.AUTO_LVL_UP:
                     info = await self.get_balance(http_client=http_client)
@@ -676,21 +678,24 @@ class Tapper:
                 if settings.PLAY_HURTMEPLEASE_GAME:
                     await self.play_game_6(http_client=http_client)
 
-                logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Going sleep 1 hour")
+                logger.info(f"<light-yellow>{self.session_name}</light-yellow> | Going sleep 1,5 hour")
 
-                await asyncio.sleep(3600)
+                await asyncio.sleep(5400)
 
             except InvalidSession as error:
                 raise error
 
             except Exception as error:
                 logger.error(f"<light-yellow>{self.session_name}</light-yellow> | Unknown error: {error}")
-                await asyncio.sleep(delay=3)
+                await asyncio.sleep(delay=600)
                 continue
 
 
-async def run_tapper(tg_client: Client, proxy: str | None):
+async def run_tapper(tg_client: Client, proxy: str | None, start_sleep: int):
     try:
+        logger.warning(f"{tg_client.name} | Start sleep <c>{start_sleep:,}</c> sec.")
+        await asyncio.sleep(start_sleep)
+
         await Tapper(tg_client=tg_client).run(proxy=proxy)
     except InvalidSession:
         logger.error(f"{tg_client.name} | Invalid Session")

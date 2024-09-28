@@ -3,6 +3,7 @@ import glob
 import asyncio
 import argparse
 from itertools import cycle
+import random
 
 from pyrogram import Client
 from better_proxy import Proxy
@@ -110,15 +111,19 @@ async def process() -> None:
 
 async def run_tasks(tg_clients: list[Client]):
     proxies = get_proxies()
-    proxies_cycle = cycle(proxies) if proxies else None
-    tasks = [
-        asyncio.create_task(
-            run_tapper(
-                tg_client=tg_client,
-                proxy=next(proxies_cycle) if proxies_cycle else None,
+    proxies_cycle = cycle(proxies) if proxies else None    
+    time: int = 0
+    for tg_client in tg_clients:
+        tasks = [
+            asyncio.create_task(
+                run_tapper(
+                    tg_client=tg_client,
+                    proxy=next(proxies_cycle) if proxies_cycle else None,
+                    start_sleep=time
+                )
             )
-        )
-        for tg_client in tg_clients
-    ]
+
+        ]
+        time = time + 60 + random.randint(0, 60)
 
     await asyncio.gather(*tasks)
